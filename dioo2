@@ -1,44 +1,129 @@
 #!/bin/bash
 # scripts/azure_vm_commands.sh
+# Script interativo para gerenciar máquinas virtuais no Azure com Azure CLI
 
-# 1. Login na conta Azure
-az login
+# Cores para terminal
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # Sem cor
 
-# 2. Criar um grupo de recursos (substitua "meuGrupo" e "eastus" conforme sua região)
-az group create --name meuGrupo --location eastus
+echo -e "${BLUE}=== Gerenciamento de Máquinas Virtuais no Azure ===${NC}"
 
-# 3. Criar uma máquina virtual Linux básica
-az vm create \
-  --resource-group meuGrupo \
-  --name minhaVM \
-  --image UbuntuLTS \
-  --admin-username azureuser \
-  --generate-ssh-keys
+# Função para criar grupo de recursos
+criar_grupo() {
+  echo -e "${YELLOW}Criando grupo de recursos...${NC}"
+  read -p "Nome do grupo: " grupo
+  read -p "Região (ex: eastus): " regiao
+  az group create --name "$grupo" --location "$regiao"
+  echo -e "${GREEN}Grupo '$grupo' criado na região '$regiao'.${NC}"
+}
 
-# 4. Abrir porta 22 para SSH na VM
-az vm open-port --port 22 --resource-group meuGrupo --name minhaVM
+# Função para criar VM Linux
+criar_vm() {
+  echo -e "${YELLOW}Criando máquina virtual Linux...${NC}"
+  read -p "Nome do grupo de recursos: " grupo
+  read -p "Nome da VM: " vm
+  read -p "Nome do usuário admin: " user
+  az vm create \
+    --resource-group "$grupo" \
+    --name "$vm" \
+    --image UbuntuLTS \
+    --admin-username "$user" \
+    --generate-ssh-keys
+  echo -e "${GREEN}VM '$vm' criada no grupo '$grupo'.${NC}"
+}
 
-# 5. Conectar via SSH (exemplo)
-# ssh azureuser@<ip-publico-da-vm>
+# Função para abrir porta SSH
+abrir_ssh() {
+  echo -e "${YELLOW}Abrindo porta 22 para SSH...${NC}"
+  read -p "Nome do grupo de recursos: " grupo
+  read -p "Nome da VM: " vm
+  az vm open-port --port 22 --resource-group "$grupo" --name "$vm"
+  echo -e "${GREEN}Porta 22 aberta para VM '$vm'.${NC}"
+}
 
-# 6. Criar um Virtual Machine Scale Set (VMSS) básico
-az vmss create \
-  --resource-group meuGrupo \
-  --name meuScaleSet \
-  --image UbuntuLTS \
-  --upgrade-policy-mode automatic \
-  --admin-username azureuser \
-  --generate-ssh-keys \
-  --instance-count 2
+# Função para criar VM Scale Set
+criar_vmss() {
+  echo -e "${YELLOW}Criando Virtual Machine Scale Set (VMSS)...${NC}"
+  read -p "Nome do grupo de recursos: " grupo
+  read -p "Nome do Scale Set: " vmss
+  read -p "Nome do usuário admin: " user
+  read -p "Número de instâncias: " count
+  az vmss create \
+    --resource-group "$grupo" \
+    --name "$vmss" \
+    --image UbuntuLTS \
+    --upgrade-policy-mode automatic \
+    --admin-username "$user" \
+    --generate-ssh-keys \
+    --instance-count "$count"
+  echo -e "${GREEN}VMSS '$vmss' criada com $count instâncias.${NC}"
+}
 
-# 7. Listar máquinas virtuais no grupo de recursos
-az vm list --resource-group meuGrupo -o table
+# Função para listar VMs
+listar_vms() {
+  read -p "Nome do grupo de recursos: " grupo
+  echo -e "${YELLOW}Listando VMs no grupo '$grupo'...${NC}"
+  az vm list --resource-group "$grupo" -o table
+}
 
-# 8. Parar uma VM
-az vm stop --resource-group meuGrupo --name minhaVM
+# Função para parar VM
+parar_vm() {
+  read -p "Nome do grupo de recursos: " grupo
+  read -p "Nome da VM: " vm
+  az vm stop --resource-group "$grupo" --name "$vm"
+  echo -e "${GREEN}VM '$vm' parada.${NC}"
+}
 
-# 9. Iniciar uma VM
-az vm start --resource-group meuGrupo --name minhaVM
+# Função para iniciar VM
+iniciar_vm() {
+  read -p "Nome do grupo de recursos: " grupo
+  read -p "Nome da VM: " vm
+  az vm start --resource-group "$grupo" --name "$vm"
+  echo -e "${GREEN}VM '$vm' iniciada.${NC}"
+}
 
-# 10. Deletar uma VM
-az vm delete --resource-group meuGrupo --name minhaVM --yes
+# Função para deletar VM
+deletar_vm() {
+  read -p "Nome do grupo de recursos: " grupo
+  read -p "Nome da VM: " vm
+  read -p "Tem certeza que deseja deletar a VM '$vm'? (s/n): " confirma
+  if [[ "$confirma" == "s" || "$confirma" == "S" ]]; then
+    az vm delete --resource-group "$grupo" --name "$vm" --yes
+    echo -e "${GREEN}VM '$vm' deletada.${NC}"
+  else
+    echo -e "${RED}Operação cancelada.${NC}"
+  fi
+}
+
+# Menu interativo
+while true; do
+  echo -e "\n${BLUE}Escolha uma opção:${NC}"
+  echo "1) Login na Azure"
+  echo "2) Criar grupo de recursos"
+  echo "3) Criar VM Linux"
+  echo "4) Abrir porta SSH (22)"
+  echo "5) Criar VM Scale Set (VMSS)"
+  echo "6) Listar VMs"
+  echo "7) Parar VM"
+  echo "8) Iniciar VM"
+  echo "9) Deletar VM"
+  echo "0) Sair"
+  read -p "Opção: " opcao
+
+  case $opcao in
+    1) az login ;;
+    2) criar_grupo ;;
+    3) criar_vm ;;
+    4) abrir_ssh ;;
+    5) criar_vmss ;;
+    6) listar_vms ;;
+    7) parar_vm ;;
+    8) iniciar_vm ;;
+    9) deletar_vm ;;
+    0) echo -e "${BLUE}Saindo...${NC}"; exit 0 ;;
+    *) echo -e "${RED}Opção inválida! Tente novamente.${NC}" ;;
+  esac
+done
