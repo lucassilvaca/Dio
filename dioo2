@@ -1,0 +1,44 @@
+#!/bin/bash
+# scripts/azure_vm_commands.sh
+
+# 1. Login na conta Azure
+az login
+
+# 2. Criar um grupo de recursos (substitua "meuGrupo" e "eastus" conforme sua região)
+az group create --name meuGrupo --location eastus
+
+# 3. Criar uma máquina virtual Linux básica
+az vm create \
+  --resource-group meuGrupo \
+  --name minhaVM \
+  --image UbuntuLTS \
+  --admin-username azureuser \
+  --generate-ssh-keys
+
+# 4. Abrir porta 22 para SSH na VM
+az vm open-port --port 22 --resource-group meuGrupo --name minhaVM
+
+# 5. Conectar via SSH (exemplo)
+# ssh azureuser@<ip-publico-da-vm>
+
+# 6. Criar um Virtual Machine Scale Set (VMSS) básico
+az vmss create \
+  --resource-group meuGrupo \
+  --name meuScaleSet \
+  --image UbuntuLTS \
+  --upgrade-policy-mode automatic \
+  --admin-username azureuser \
+  --generate-ssh-keys \
+  --instance-count 2
+
+# 7. Listar máquinas virtuais no grupo de recursos
+az vm list --resource-group meuGrupo -o table
+
+# 8. Parar uma VM
+az vm stop --resource-group meuGrupo --name minhaVM
+
+# 9. Iniciar uma VM
+az vm start --resource-group meuGrupo --name minhaVM
+
+# 10. Deletar uma VM
+az vm delete --resource-group meuGrupo --name minhaVM --yes
